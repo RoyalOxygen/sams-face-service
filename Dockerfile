@@ -2,22 +2,32 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV and InsightFace
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
+# System libraries required by OpenCV / InsightFace
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
+    libxrender1 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Download InsightFace models on first run (mounted volume persists them)
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
 COPY main.py .
+
+# InsightFace model/data locations
+ENV SAMS_MODEL_DIR=/app/models
+ENV SAMS_DATA_DIR=/app/data
+
+RUN mkdir -p /app/models /app/data
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
